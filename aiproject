@@ -1,0 +1,326 @@
+#crossover 
+import numpy as np
+import random
+
+parent1 = [1,2,3,4,5,6,7,8,9]
+# print('parent 1')
+# print(parent1)
+parent2 = [7,6,9,4,3,2,1,5,8]
+# print('parent 2')
+# print(parent2)
+parts1 = np.array_split(parent1, 3)
+
+parent1s1, parent1s2, parent1s3 = parts1[0], parts1[1], parts1[2]
+
+#print(parent1s1)
+#print(parent1s2)
+#print(parent1s3)
+
+parts2 = np.array_split(parent2, 3)
+
+parent2s1, parent2s2, parent2s3 = parts2[0], parts2[1], parts2[2]
+
+#print(parent2s1)
+#print('parent2s2')
+#print(parent2s2)
+#print(parent2s3)
+
+#taking the symbols from parent1s2, we see if they match in parent2 and make them holes
+
+newParent2 = parent2
+for i in range(len(parent2)):
+    if parent2[i] in parent1s2:
+        newParent2[i] = 'H'
+
+# print('newParent2 with H as holes')
+# print(newParent2)
+
+newParent1 = parent1
+for i in range(len(parent1)):
+    if parent1[i] in parent2s2:
+        newParent1[i] = 'H'
+# print('newParent1 with H as holes')
+# print(newParent1)
+
+parts3 = np.array_split(newParent2, 3)
+parts4 = np.array_split(newParent1, 3)
+newparent2s1, newparent2s2, newparent2s3 = parts3[0], parts3[1], parts3[2]
+newparent1s1, newparent1s2, newparent1s3 = parts4[0], parts4[1], parts4[2]
+
+newparent2s2 = parent1s2
+newparent1s2 = parent2s2
+
+# print(newparent2s1)
+# print(newparent2s2)
+# print(newparent2s3)
+
+newParent2 = []
+newParent2.extend(newparent2s1)
+newParent2.extend(newparent2s2)
+newParent2.extend(newparent2s3)
+# print('newParent2')
+# print(newParent2)
+
+newParent1 = []
+newParent1.extend(newparent1s1)
+newParent1.extend(newparent1s2)
+newParent1.extend(newparent1s3)
+# print('newParent1')
+# print(newParent1)
+
+#trouble with actually replicating the list without any duplicates to fill in the
+#holes 
+
+# existing_nums = set([x for x in newParent2 if type(x) is int])
+
+# for i in range(len(newParent2)):
+#     if isinstance(newParent2[i], str) and newParent2[i] == 'H':
+#         for j in range(1, 10):
+#             if j not in existing_nums:
+#                 newParent2[i] = j
+#                 existing_nums.add(j)
+#                 newParent2[i] = str(j)
+#                 existing_nums.add(j)
+#                 break
+
+# for i in range(len(newParent2)):
+#     if isinstance(newParent2[i], int):
+#         newParent2[i] = str(newParent2[i])
+
+existing_nums = set([x for x in newParent2 if type(x) is int])
+existing_nums2 = set([x for x in newParent1 if type(x) is int])
+
+for i in range(len(newParent2)):
+    if isinstance(newParent2[i], str) and newParent2[i] == 'H':
+        for j in range(1, 10):
+            if j not in existing_nums and str(j) not in newParent2:
+                newParent2[i] = str(j)
+                existing_nums.add(j)
+                break
+for i in range(len(newParent1)):
+    if isinstance(newParent1[i], str) and newParent1[i] == 'H':
+        for j in range(1, 10):
+            if j not in existing_nums2 and str(j) not in newParent1:
+                newParent1[i] = str(j)
+                existing_nums2.add(j)
+                break
+# print(newParent2)
+newParent2 = [int(x) if isinstance(x, str) else x for x in newParent2]
+newParent1 = [int(x) if isinstance(x, str) else x for x in newParent1]
+# print(newParent2)
+child1 = newParent2
+child2 = newParent1
+# print('child 1')
+# print(child1)
+# print('child 2')
+
+middle_numbers = [4,3,2]
+#trouble with duplicate index's so providing a new technique to fix the duplicates
+#i keep getting duplicates so im changing the second and third index's 
+for i in [1, 2]:
+    while child2[i] in middle_numbers or child2[i] == child2[i-1]:
+        child2[i] += 1
+# print(child2)
+
+#mutation operation
+#random.random generates a random number between 0-1, if its less than 3% two random index's
+#are selected and swaps the two elements
+rand_num = random.random()
+if rand_num < 0.03:
+    idx1, idx2 = random.sample(range(len(child1)), 2)
+    child1[idx1], child1[idx2] = child1[idx1], child1[idx2]
+
+if rand_num < 0.03:
+    idx1, idx2 = random.sample(range(len(child2)), 2)
+    child2[idx1], child2[idx2] = child2[idx1], child2[idx2]
+# print(child1)
+# print(child2)
+
+
+def fitness_function(chromosome, processing_times, num_machines):
+    job_start_times = [0] * len(chromosome)
+    machine_avail_times = [0] * num_machines
+    for gene in chromosome:
+        job_index = gene[0]
+        machine_index = gene[1]
+        processing_time = processing_times[job_index][machine_index]
+        start_time = max(job_start_times[job_index], machine_avail_times[machine_index])
+        job_start_times[job_index] = start_time + processing_time
+        machine_avail_times[machine_index] = start_time + processing_time
+    return max(job_start_times)
+
+def generate_chromosome(num_jobs, num_machines):
+    genes = [(j, m) for j in range(num_jobs) for m in range(num_machines)]
+    random.shuffle(genes)
+    return genes
+
+def mutate_chromosome(chromosome):
+    gene1, gene2 = random.sample(chromosome, 2)
+    index1, index2 = chromosome.index(gene1), chromosome.index(gene2)
+    chromosome[index1], chromosome[index2] = chromosome[index2], chromosome[index1]
+    return chromosome
+
+def genetic_algorithm(num_jobs, num_machines, processing_times, population_size, generations):
+    population = [generate_chromosome(num_jobs, num_machines) for _ in range(population_size)]
+    for i in range(generations):
+        fitness_scores = [(chromosome, fitness_function(chromosome, processing_times, num_machines)) for chromosome in population]
+        fitness_scores.sort(key=lambda x: x[1])
+        elites = [chromosome for chromosome, _ in fitness_scores[:int(population_size/2)]]
+        new_population = elites.copy()
+        while len(new_population) < population_size:
+            parent1, parent2 = random.choices(elites, k=2)
+            child = []
+            for gene1, gene2 in zip(parent1, parent2):
+                if random.random() < 0.5:
+                    child.append(gene1)
+                else:
+                    child.append(gene2)
+            if random.random() < 0.1:
+                child = mutate_chromosome(child)
+            new_population.append(child)
+        population = new_population
+    best_chromosome, best_fitness = min(fitness_scores, key=lambda x: x[1])
+    return best_chromosome, best_fitness
+
+#R3
+# Example problem instance with 10 jobs, 3 operations per job, and 3 machines
+processing_times = [
+    [8, 3, 2], [7, 9, 8], [6, 5, 1], [2, 6, 7], [4, 9, 3],
+    [1, 7, 8], [3, 5, 2], [2, 8, 9], [9, 4, 1], [7, 6, 3]
+]
+
+num_jobs = len(processing_times)
+num_machines = len(processing_times[0])
+
+# Run the genetic algorithm
+best_chromosome, best_fitness = genetic_algorithm(num_jobs, num_machines, processing_times, population_size=300, generations=100)
+makespan = fitness_function(best_chromosome, processing_times, num_machines)
+print('R3')
+print("Best fitness:", best_fitness)
+print("Makespan:", makespan)
+
+#R4
+def fitness_function(chromosome, processing_times, num_machines):
+    job_start_times = [0] * len(chromosome)
+    machine_avail_times = [0] * num_machines
+    for gene in chromosome:
+        job_index = gene[0]
+        machine_index = gene[1]
+        processing_time = processing_times[job_index][machine_index]
+        start_time = max(job_start_times[job_index], machine_avail_times[machine_index])
+        job_start_times[job_index] = start_time + processing_time
+        machine_avail_times[machine_index] = start_time + processing_time
+    return max(job_start_times)
+
+def generate_chromosome(num_jobs, num_machines):
+    genes = [(j, m) for j in range(num_jobs) for m in range(num_machines)]
+    random.shuffle(genes)
+    return genes
+
+def mutate_chromosome(chromosome):
+    gene1, gene2 = random.sample(chromosome, 2)
+    index1, index2 = chromosome.index(gene1), chromosome.index(gene2)
+    chromosome[index1], chromosome[index2] = chromosome[index2], chromosome[index1]
+    return chromosome
+
+def genetic_algorithm(num_jobs, num_machines, processing_times, population_size, generations):
+    population = [generate_chromosome(num_jobs, num_machines) for _ in range(population_size)]
+    for i in range(generations):
+        fitness_scores = [(chromosome, fitness_function(chromosome, processing_times, num_machines)) for chromosome in population]
+        fitness_scores.sort(key=lambda x: x[1])
+        elites = [chromosome for chromosome, _ in fitness_scores[:int(population_size/2)]]
+        new_population = elites.copy()
+        while len(new_population) < population_size:
+            parent1, parent2 = random.choices(elites, k=2)
+            child = []
+            for gene1, gene2 in zip(parent1, parent2):
+                if random.random() < 0.5:
+                    child.append(gene1)
+                else:
+                    child.append(gene2)
+            if random.random() < 0.1:
+                child = mutate_chromosome(child)
+            new_population.append(child)
+        population = new_population
+    best_chromosome, best_fitness = min(fitness_scores, key=lambda x: x[1])
+    return best_chromosome, best_fitness
+
+#R4
+# Example problem instance with 10 jobs, 3 operations per job, and 5 machines
+processing_times = [
+    [8, 3, 2,1,5], [7, 9, 8,5,3], [6, 5, 1,2,8], [2, 6, 7,1,9], [4, 9, 3,4,5],
+    [1, 7, 8,9,6], [3, 5, 2,4,7], [2, 8, 9,2,8], [9, 4, 1,5,8], [7, 6, 3,3,9]
+]
+
+num_jobs = len(processing_times)
+num_machines = len(processing_times[0])
+
+# Run the genetic algorithm
+best_chromosome, best_fitness = genetic_algorithm(num_jobs, num_machines, processing_times, population_size=300, generations=100)
+makespan = fitness_function(best_chromosome, processing_times, num_machines)
+print('R4')
+print("Best fitness:", best_fitness)
+print("Makespan:", makespan)
+
+#R5
+def fitness_function(chromosome, processing_times, num_machines):
+    job_start_times = [0] * len(chromosome)
+    machine_avail_times = [0] * num_machines
+    for gene in chromosome:
+        job_index = gene[0]
+        machine_index = gene[1]
+        processing_time = processing_times[job_index][machine_index]
+        start_time = max(job_start_times[job_index], machine_avail_times[machine_index])
+        job_start_times[job_index] = start_time + processing_time
+        machine_avail_times[machine_index] = start_time + processing_time
+    return max(job_start_times)
+
+def generate_chromosome(num_jobs, num_machines):
+    genes = [(j, m) for j in range(num_jobs) for m in range(num_machines)]
+    random.shuffle(genes)
+    return genes
+
+def mutate_chromosome(chromosome):
+    gene1, gene2 = random.sample(chromosome, 2)
+    index1, index2 = chromosome.index(gene1), chromosome.index(gene2)
+    chromosome[index1], chromosome[index2] = chromosome[index2], chromosome[index1]
+    return chromosome
+
+def genetic_algorithm(num_jobs, num_machines, processing_times, population_size, generations):
+    population = [generate_chromosome(num_jobs, num_machines) for _ in range(population_size)]
+    for i in range(generations):
+        fitness_scores = [(chromosome, fitness_function(chromosome, processing_times, num_machines)) for chromosome in population]
+        fitness_scores.sort(key=lambda x: x[1])
+        elites = [chromosome for chromosome, _ in fitness_scores[:int(population_size/2)]]
+        new_population = elites.copy()
+        while len(new_population) < population_size:
+            parent1, parent2 = random.choices(elites, k=2)
+            child = []
+            for gene1, gene2 in zip(parent1, parent2):
+                if random.random() < 0.5:
+                    child.append(gene1)
+                else:
+                    child.append(gene2)
+            if random.random() < 0.1:
+                child = mutate_chromosome(child)
+            new_population.append(child)
+        population = new_population
+    best_chromosome, best_fitness = min(fitness_scores, key=lambda x: x[1])
+    return best_chromosome, best_fitness
+
+#R5
+# Example problem instance with 10 jobs, 5 operations per job, and 3 machines
+processing_times = [
+    [8, 3, 2], [7, 9, 8], [6, 5, 1], [2, 6, 7], [4, 9, 3],
+    [1, 7, 8], [3, 5, 2], [2, 8, 9], [9, 4, 1], [7, 6, 3]
+]
+
+num_jobs = len(processing_times)
+num_machines = len(processing_times[0])
+
+# Run the genetic algorithm
+best_chromosome, best_fitness = genetic_algorithm(num_jobs, num_machines, processing_times, population_size=300, generations=100)
+makespan = fitness_function(best_chromosome, processing_times, num_machines)
+print('R5')
+print("fitness:", best_fitness)
+print("Makespan:", makespan)
